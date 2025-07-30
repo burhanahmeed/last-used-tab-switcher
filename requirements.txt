@@ -1,0 +1,12 @@
+# Requirements for Chrome Extension Icon Generation
+# Install with: pip install -r requirements.txt
+
+# For creating PNG icons from Python
+Pillow>=10.0.0
+
+# Optional: For SVG to PNG conversion (requires system Cairo library)
+# cairosvg>=2.8.0
+
+# Development dependencies (optional)
+# black>=23.0.0  # Code formatting
+# flake8>=6.0.0  # Linting

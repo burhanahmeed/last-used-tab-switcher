@@ -41,7 +41,10 @@ When you use the keyboard shortcut or click the switch button, it activates the 
 - `background.js` - Service worker that tracks tab usage
 - `popup.html` - Extension popup interface
 - `popup.js` - Popup functionality
-- `icon*.png` - Extension icons (add your own 16x16, 48x48, 128x128 PNG files)
+- `icon*.png` - Extension icons (16x16, 48x48, 128x128 PNG files)
+- `requirements.txt` - Python dependencies for icon generation
+- `LICENSE` - MIT License
+- `create_simple_icons.py` - Script to generate icons
 
 ## Customization
 
