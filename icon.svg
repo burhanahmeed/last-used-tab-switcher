@@ -1,0 +1,30 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#4285f4" stroke="#2c5aa0" stroke-width="2"/>
+  
+  <!-- Tab 1 (current) -->
+  <rect x="25" y="35" width="35" height="20" rx="3" fill="white" stroke="#333" stroke-width="1.5"/>
+  <text x="42.5" y="48" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#333">1</text>
+  
+  <!-- Tab 2 (last used) -->
+  <rect x="68" y="35" width="35" height="20" rx="3" fill="#e8e8e8" stroke="#333" stroke-width="1.5"/>
+  <text x="85.5" y="48" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#333">2</text>
+  
+  <!-- Arrow showing switch direction -->
+  <path d="M 42 70 Q 64 85 86 70" stroke="#fff" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 86 70 Q 64 55 42 70" stroke="#fff" stroke-width="3" fill="none" marker-end="url(#arrowhead2)"/>
+  
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fff"/>
+    </marker>
+    <marker id="arrowhead2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#fff"/>
+    </marker>
+  </defs>
+  
+  <!-- Small "Q" indicator for shortcut -->
+  <circle cx="100" cy="100" r="12" fill="#fff" stroke="#4285f4" stroke-width="2"/>
+  <text x="100" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#4285f4">Q</text>
+</svg>
