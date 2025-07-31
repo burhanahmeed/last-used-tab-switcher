@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const switchButton = document.getElementById('switchButton');
+  const duplicateButton = document.getElementById('duplicateButton');
   const statusDiv = document.getElementById('status');
   
   // Get tab information from background script
@@ -25,6 +26,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error switching tabs:', error);
       switchButton.disabled = false;
       switchButton.textContent = 'Switch to Last Used Tab';
+    }
+  });
+  
+  // Handle duplicate button click
+  duplicateButton.addEventListener('click', async () => {
+    try {
+      duplicateButton.disabled = true;
+      duplicateButton.textContent = 'Duplicating...';
+      
+      await chrome.runtime.sendMessage({ action: 'duplicateTab' });
+      
+      // Close popup after duplicating
+      window.close();
+    } catch (error) {
+      console.error('Error duplicating tab:', error);
+      duplicateButton.disabled = false;
+      duplicateButton.textContent = 'Duplicate Current Tab';
     }
   });
 });

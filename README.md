@@ -1,11 +1,15 @@
 # Last Used Tab Switcher - Chrome Extension
 
-A Chrome extension that allows you to quickly switch between your current tab and the last used tab, similar to Firefox's behavior.
+A Chrome extension that allows you to quickly switch between your current tab and the last used tab, plus duplicate the current tab, similar to Firefox's behavior.
 
 ## Features
 
-- **Keyboard Shortcut**: Use `Ctrl+Shift+Tab` (or `Cmd+Shift+Tab` on Mac) to switch to the last used tab
-- **Popup Interface**: Click the extension icon to see tab information and switch manually
+- **Tab Switching**: Quickly switch between current and last used tab
+- **Tab Duplication**: Duplicate the current tab with a keyboard shortcut
+- **Keyboard Shortcuts**: 
+  - `Alt+Tab` (Mac) / `Ctrl+Q` (Windows/Linux) to switch to last used tab
+  - `Alt+Shift+D` (Mac) / `Ctrl+Shift+D` (Windows/Linux) to duplicate current tab
+- **Popup Interface**: Click the extension icon to access both features manually
 - **Automatic Tracking**: Automatically tracks your tab usage in the background
 
 ## Installation
@@ -17,15 +21,23 @@ A Chrome extension that allows you to quickly switch between your current tab an
 
 ## Usage
 
-### Keyboard Shortcut
-- Press `Ctrl+Q` on all platforms (Windows/Linux/Mac) to switch to your last used tab
-- Using `Ctrl+Q` on Mac avoids conflicts with `Cmd+Q` (which quits applications)
-- The shortcut can be customized in Chrome's extension settings at `chrome://extensions/shortcuts`
+### Keyboard Shortcuts
+
+**Switch to Last Used Tab:**
+- `Alt+Tab` on Mac
+- `Ctrl+Q` on Windows/Linux
+
+**Duplicate Current Tab:**
+- `Alt+Shift+D` on Mac  
+- `Ctrl+Shift+D` on Windows/Linux
+
+All shortcuts can be customized in Chrome's extension settings at `chrome://extensions/shortcuts`
 
 ### Popup Interface
 - Click the extension icon in the toolbar
 - View current and last used tab information
-- Click "Switch to Last Used Tab" button
+- Click "Switch to Last Used Tab" button to switch tabs
+- Click "Duplicate Current Tab" button to duplicate the current tab
 
 ## How It Works
 
@@ -33,7 +45,9 @@ The extension tracks tab activation events and maintains a record of:
 - Current active tab
 - Last used tab (the tab you were on before the current one)
 
-When you use the keyboard shortcut or click the switch button, it activates the last used tab, making tab switching quick and efficient.
+**Tab Switching:** When you use the switch shortcut or button, it activates the last used tab, making tab switching quick and efficient.
+
+**Tab Duplication:** When you use the duplicate shortcut or button, it creates a new tab with the same URL as the current tab and places it immediately after the current tab.
 
 ## Files Structure
 

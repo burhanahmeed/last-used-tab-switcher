@@ -17,6 +17,13 @@
         "mac": "Alt+Tab"
       },
       "description": "Switch to last used tab"
+    },
+    "duplicate-tab": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+D",
+        "mac": "Alt+Shift+D"
+      },
+      "description": "Duplicate current tab"
     }
   },
   "action": {

@@ -68,12 +68,13 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.commands.onCommand.addListener(async (command) => {
   console.log('Command received:', command);
   console.log('Command type:', typeof command);
-  console.log('Expected command: switch-to-last-tab');
-  console.log('Commands match:', command === 'switch-to-last-tab');
   
   if (command === 'switch-to-last-tab') {
     console.log('Switching to last used tab via keyboard shortcut');
     await switchToLastUsedTab();
+  } else if (command === 'duplicate-tab') {
+    console.log('Duplicating current tab via keyboard shortcut');
+    await duplicateCurrentTab();
   } else {
     console.log('Unknown command received:', command);
   }
@@ -105,10 +106,37 @@ async function switchToLastUsedTab() {
   }
 }
 
+// Function to duplicate current tab
+async function duplicateCurrentTab() {
+  try {
+    // Get the currently active tab
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!activeTab) {
+      console.log('No active tab found');
+      return;
+    }
+
+    // Create a duplicate of the current tab
+    const duplicatedTab = await chrome.tabs.create({
+      url: activeTab.url,
+      index: activeTab.index + 1, // Place the new tab right after the current one
+      active: true // Make the duplicated tab active
+    });
+    
+    console.log(`Duplicated tab: ${activeTab.id} -> ${duplicatedTab.id}`);
+    console.log(`Duplicated URL: ${activeTab.url}`);
+  } catch (error) {
+    console.error('Error duplicating current tab:', error);
+  }
+}
+
 // Message handler for popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'switchToLastTab') {
     switchToLastUsedTab();
+    sendResponse({ success: true });
+  } else if (request.action === 'duplicateTab') {
+    duplicateCurrentTab();
     sendResponse({ success: true });
   } else if (request.action === 'getTabInfo') {
     sendResponse({
