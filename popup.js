@@ -52,13 +52,27 @@ function updateStatus(tabInfo) {
   const switchButton = document.getElementById('switchButton');
   
   if (tabInfo.lastUsedTabId) {
+    const historyText = tabInfo.tabHistory && tabInfo.tabHistory.length > 0 
+      ? `<div>Tab History: [${tabInfo.tabHistory.slice(0, 5).join(', ')}${tabInfo.tabHistory.length > 5 ? '...' : ''}]</div>`
+      : '';
+    
     statusDiv.innerHTML = `
       <div>Current Tab ID: ${tabInfo.currentTabId || 'Unknown'}</div>
       <div>Last Used Tab ID: ${tabInfo.lastUsedTabId}</div>
+      ${historyText}
+      <div style="margin-top: 8px; font-size: 12px; color: #666;">✓ Ready to switch</div>
     `;
     switchButton.disabled = false;
   } else {
-    statusDiv.textContent = 'No last used tab available. Switch between tabs first.';
+    const hasHistory = tabInfo.tabHistory && tabInfo.tabHistory.length > 0;
+    const message = hasHistory 
+      ? 'No available tabs in history (all may be closed)'
+      : 'No last used tab available. Switch between tabs first.';
+    
+    statusDiv.innerHTML = `
+      <div>${message}</div>
+      ${hasHistory ? `<div style="font-size: 12px; color: #666; margin-top: 4px;">History had: [${tabInfo.tabHistory.join(', ')}]</div>` : ''}
+    `;
     switchButton.disabled = true;
   }
 }

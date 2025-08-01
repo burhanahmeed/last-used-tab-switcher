@@ -1,6 +1,23 @@
-// Track the last used tab
-let lastUsedTabId = null;
+// Track tab history (most recent first)
+let tabHistory = [];
 let currentTabId = null;
+
+// Helper function to get the last used tab (excluding current)
+function getLastUsedTabId() {
+  return tabHistory.find(tabId => tabId !== currentTabId) || null;
+}
+
+// Helper function to add tab to history
+function addToHistory(tabId) {
+  if (!tabId) return;
+  
+  // Remove if already exists
+  tabHistory = tabHistory.filter(id => id !== tabId);
+  // Add to front
+  tabHistory.unshift(tabId);
+  // Keep only last 10 tabs
+  tabHistory = tabHistory.slice(0, 10);
+}
 
 // Test that the script is loading
 console.log('Background script loaded successfully!');
@@ -43,25 +60,40 @@ async function initializeTabTracking() {
 
 // Listen for tab activation changes
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  // Store the previous current tab as the last used tab
+  // Add previous current tab to history
   if (currentTabId && currentTabId !== activeInfo.tabId) {
-    lastUsedTabId = currentTabId;
+    addToHistory(currentTabId);
   }
   
   // Update current tab
   currentTabId = activeInfo.tabId;
   
+  const lastUsedTabId = getLastUsedTabId();
   console.log(`Tab switched: Current=${currentTabId}, Last=${lastUsedTabId}`);
+  console.log('Tab history:', tabHistory);
 });
 
 // Listen for tab removal
 chrome.tabs.onRemoved.addListener((tabId) => {
-  if (tabId === lastUsedTabId) {
-    lastUsedTabId = null;
-  }
+  console.log(`Tab removed: ${tabId}`);
+  
+  // Remove from history
+  tabHistory = tabHistory.filter(id => id !== tabId);
+  
+  // If current tab was closed, we need to find the new current tab
   if (tabId === currentTabId) {
-    currentTabId = null;
+    // Get the new active tab
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs.length > 0) {
+        currentTabId = tabs[0].id;
+        console.log(`New current tab after closure: ${currentTabId}`);
+      } else {
+        currentTabId = null;
+      }
+    });
   }
+  
+  console.log('Updated tab history after removal:', tabHistory);
 });
 
 // Listen for keyboard shortcut
@@ -83,6 +115,8 @@ chrome.commands.onCommand.addListener(async (command) => {
 // Function to switch to last used tab
 async function switchToLastUsedTab() {
   try {
+    const lastUsedTabId = getLastUsedTabId();
+    
     if (!lastUsedTabId) {
       console.log('No last used tab available');
       return;
@@ -97,9 +131,18 @@ async function switchToLastUsedTab() {
         console.log(`Switched to last used tab: ${lastUsedTabId}`);
       }
     } catch (error) {
-      // Tab doesn't exist anymore
-      console.log('Last used tab no longer exists');
-      lastUsedTabId = null;
+      // Tab doesn't exist anymore, remove it from history and try next
+      console.log(`Tab ${lastUsedTabId} no longer exists, removing from history`);
+      tabHistory = tabHistory.filter(id => id !== lastUsedTabId);
+      
+      // Try the next tab in history
+      const nextLastUsedTabId = getLastUsedTabId();
+      if (nextLastUsedTabId) {
+        console.log(`Trying next tab in history: ${nextLastUsedTabId}`);
+        await switchToLastUsedTab(); // Recursive call to try next tab
+      } else {
+        console.log('No more tabs in history');
+      }
     }
   } catch (error) {
     console.error('Error switching to last used tab:', error);
@@ -141,7 +184,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'getTabInfo') {
     sendResponse({
       currentTabId: currentTabId,
-      lastUsedTabId: lastUsedTabId
+      lastUsedTabId: getLastUsedTabId(),
+      tabHistory: tabHistory
     });
   }
 });
