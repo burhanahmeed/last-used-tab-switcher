@@ -1,6 +1,14 @@
 // Track tab history (most recent first)
 let tabHistory = [];
 let currentTabId = null;
+let currentWindowId = null;
+
+// Storage keys
+const STORAGE_KEYS = {
+  TAB_HISTORY: 'tabHistory',
+  CURRENT_TAB_ID: 'currentTabId',
+  CURRENT_WINDOW_ID: 'currentWindowId'
+};
 
 // Helper function to get the last used tab (excluding current)
 function getLastUsedTabId() {
@@ -17,6 +25,41 @@ function addToHistory(tabId) {
   tabHistory.unshift(tabId);
   // Keep only last 10 tabs
   tabHistory = tabHistory.slice(0, 10);
+  
+  // Persist to storage
+  saveState();
+}
+
+// Save state to persistent storage
+async function saveState() {
+  try {
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.TAB_HISTORY]: tabHistory,
+      [STORAGE_KEYS.CURRENT_TAB_ID]: currentTabId,
+      [STORAGE_KEYS.CURRENT_WINDOW_ID]: currentWindowId
+    });
+  } catch (error) {
+    console.error('Error saving state:', error);
+  }
+}
+
+// Load state from persistent storage
+async function loadState() {
+  try {
+    const result = await chrome.storage.local.get([
+      STORAGE_KEYS.TAB_HISTORY,
+      STORAGE_KEYS.CURRENT_TAB_ID,
+      STORAGE_KEYS.CURRENT_WINDOW_ID
+    ]);
+    
+    tabHistory = result[STORAGE_KEYS.TAB_HISTORY] || [];
+    currentTabId = result[STORAGE_KEYS.CURRENT_TAB_ID] || null;
+    currentWindowId = result[STORAGE_KEYS.CURRENT_WINDOW_ID] || null;
+    
+    console.log('Loaded state:', { tabHistory, currentTabId, currentWindowId });
+  } catch (error) {
+    console.error('Error loading state:', error);
+  }
 }
 
 // Test that the script is loading
@@ -39,12 +82,24 @@ chrome.runtime.onInstalled.addListener(() => {
 
 async function initializeTabTracking() {
   try {
-    // Get the currently active tab
-    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    // Load previous state first
+    await loadState();
+    
+    // Get the currently active tab and window
+    const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     if (activeTab) {
+      // If we have a different active tab than stored, update history
+      if (currentTabId && currentTabId !== activeTab.id) {
+        addToHistory(currentTabId);
+      }
       currentTabId = activeTab.id;
-      console.log('Initialized with current tab:', currentTabId);
+      currentWindowId = activeTab.windowId;
+      await saveState();
+      console.log('Initialized with current tab:', currentTabId, 'in window:', currentWindowId);
     }
+    
+    // Clean up history - remove tabs that no longer exist
+    await cleanupTabHistory();
     
     // Test if commands are registered
     const commands = await chrome.commands.getAll();
@@ -58,6 +113,27 @@ async function initializeTabTracking() {
   }
 }
 
+// Clean up tab history by removing tabs that no longer exist
+async function cleanupTabHistory() {
+  const validTabIds = [];
+  
+  for (const tabId of tabHistory) {
+    try {
+      await chrome.tabs.get(tabId);
+      validTabIds.push(tabId);
+    } catch (error) {
+      // Tab no longer exists, don't add to valid list
+      console.log(`Removed non-existent tab ${tabId} from history`);
+    }
+  }
+  
+  if (validTabIds.length !== tabHistory.length) {
+    tabHistory = validTabIds;
+    await saveState();
+    console.log('Cleaned up tab history:', tabHistory);
+  }
+}
+
 // Listen for tab activation changes
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   // Add previous current tab to history
@@ -65,12 +141,43 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     addToHistory(currentTabId);
   }
   
-  // Update current tab
+  // Update current tab and window
   currentTabId = activeInfo.tabId;
+  currentWindowId = activeInfo.windowId;
+  await saveState();
   
   const lastUsedTabId = getLastUsedTabId();
-  console.log(`Tab switched: Current=${currentTabId}, Last=${lastUsedTabId}`);
+  console.log(`Tab switched: Current=${currentTabId}, Last=${lastUsedTabId}, Window=${currentWindowId}`);
   console.log('Tab history:', tabHistory);
+});
+
+// Listen for window focus changes
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    // No window is focused
+    return;
+  }
+  
+  try {
+    // Get the active tab in the focused window
+    const [activeTab] = await chrome.tabs.query({ active: true, windowId: windowId });
+    if (activeTab) {
+      // Add previous current tab to history if different
+      if (currentTabId && currentTabId !== activeTab.id) {
+        addToHistory(currentTabId);
+      }
+      
+      currentTabId = activeTab.id;
+      currentWindowId = windowId;
+      await saveState();
+      
+      const lastUsedTabId = getLastUsedTabId();
+      console.log(`Window focused: Current=${currentTabId}, Last=${lastUsedTabId}, Window=${windowId}`);
+      console.log('Tab history:', tabHistory);
+    }
+  } catch (error) {
+    console.error('Error handling window focus change:', error);
+  }
 });
 
 // Listen for tab removal
@@ -83,12 +190,16 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   // If current tab was closed, we need to find the new current tab
   if (tabId === currentTabId) {
     // Get the new active tab
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, async (tabs) => {
       if (tabs.length > 0) {
         currentTabId = tabs[0].id;
-        console.log(`New current tab after closure: ${currentTabId}`);
+        currentWindowId = tabs[0].windowId;
+        await saveState();
+        console.log(`New current tab after closure: ${currentTabId} in window ${currentWindowId}`);
       } else {
         currentTabId = null;
+        currentWindowId = null;
+        await saveState();
       }
     });
   }
@@ -126,9 +237,11 @@ async function switchToLastUsedTab() {
     try {
       const tab = await chrome.tabs.get(lastUsedTabId);
       if (tab) {
-        // Switch to the last used tab
+        // Focus the window containing the tab first
+        await chrome.windows.update(tab.windowId, { focused: true });
+        // Then switch to the last used tab
         await chrome.tabs.update(lastUsedTabId, { active: true });
-        console.log(`Switched to last used tab: ${lastUsedTabId}`);
+        console.log(`Switched to last used tab: ${lastUsedTabId} in window ${tab.windowId}`);
       }
     } catch (error) {
       // Tab doesn't exist anymore, remove it from history and try next

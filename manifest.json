@@ -5,7 +5,8 @@
   "description": "Switch between current tab and last used tab, similar to Firefox behavior",
   "permissions": [
     "tabs",
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "background": {
     "service_worker": "background.js"
