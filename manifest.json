@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Last Used Tab Switcher",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Switch between current tab and last used tab, similar to Firefox behavior",
   "permissions": [
     "tabs",
