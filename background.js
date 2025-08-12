@@ -16,8 +16,10 @@ function getLastUsedTabId() {
 }
 
 // Helper function to add tab to history
-function addToHistory(tabId) {
+async function addToHistory(tabId) {
   if (!tabId) return;
+  
+  console.log(`Adding tab ${tabId} to history. Current history:`, tabHistory);
   
   // Remove if already exists
   tabHistory = tabHistory.filter(id => id !== tabId);
@@ -26,18 +28,24 @@ function addToHistory(tabId) {
   // Keep only last 10 tabs
   tabHistory = tabHistory.slice(0, 10);
   
+  console.log(`Updated history:`, tabHistory);
+  
   // Persist to storage
-  saveState();
+  await saveState();
 }
 
 // Save state to persistent storage
 async function saveState() {
   try {
-    await chrome.storage.local.set({
+    const stateToSave = {
       [STORAGE_KEYS.TAB_HISTORY]: tabHistory,
       [STORAGE_KEYS.CURRENT_TAB_ID]: currentTabId,
       [STORAGE_KEYS.CURRENT_WINDOW_ID]: currentWindowId
-    });
+    };
+    
+    console.log('Saving state:', stateToSave);
+    await chrome.storage.local.set(stateToSave);
+    console.log('State saved successfully');
   } catch (error) {
     console.error('Error saving state:', error);
   }
@@ -46,39 +54,79 @@ async function saveState() {
 // Load state from persistent storage
 async function loadState() {
   try {
+    console.log('Loading state from storage...');
     const result = await chrome.storage.local.get([
       STORAGE_KEYS.TAB_HISTORY,
       STORAGE_KEYS.CURRENT_TAB_ID,
       STORAGE_KEYS.CURRENT_WINDOW_ID
     ]);
     
+    console.log('Raw storage result:', result);
+    
     tabHistory = result[STORAGE_KEYS.TAB_HISTORY] || [];
     currentTabId = result[STORAGE_KEYS.CURRENT_TAB_ID] || null;
     currentWindowId = result[STORAGE_KEYS.CURRENT_WINDOW_ID] || null;
     
     console.log('Loaded state:', { tabHistory, currentTabId, currentWindowId });
+    console.log('Tab history length:', tabHistory.length);
   } catch (error) {
     console.error('Error loading state:', error);
   }
 }
 
 // Test that the script is loading
-console.log('Background script loaded successfully!');
+console.log('=== Background script loaded successfully! ===');
+console.log('Timestamp:', new Date().toISOString());
 console.log('Chrome APIs available:', {
   tabs: !!chrome.tabs,
   commands: !!chrome.commands,
-  runtime: !!chrome.runtime
+  runtime: !!chrome.runtime,
+  storage: !!chrome.storage,
+  windows: !!chrome.windows
 });
+
+// Add periodic state logging to debug clearing issues
+setInterval(() => {
+  console.log('=== Periodic State Check ===');
+  console.log('Current time:', new Date().toISOString());
+  console.log('Tab history:', tabHistory);
+  console.log('Current tab ID:', currentTabId);
+  console.log('Current window ID:', currentWindowId);
+  console.log('History length:', tabHistory.length);
+}, 30000); // Log every 30 seconds
 
 // Initialize when extension starts
 chrome.runtime.onStartup.addListener(() => {
+  console.log('=== Extension startup event ===');
   initializeTabTracking();
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Extension installed/enabled');
+  console.log('=== Extension installed/enabled ===');
   initializeTabTracking();
 });
+
+// Handle service worker lifecycle - initialize immediately when script loads
+// This is crucial for Manifest V3 service workers that can restart frequently
+console.log('=== Initializing immediately on script load ===');
+initializeTabTracking();
+
+// Also listen for when the service worker becomes active again
+if (chrome.runtime.onSuspend) {
+  chrome.runtime.onSuspend.addListener(() => {
+    console.log('=== Service worker suspending ===');
+    // Force save state before suspension
+    saveState();
+  });
+}
+
+// Listen for when service worker resumes
+if (chrome.runtime.onSuspendCanceled) {
+  chrome.runtime.onSuspendCanceled.addListener(() => {
+    console.log('=== Service worker suspend canceled ===');
+    initializeTabTracking();
+  });
+}
 
 async function initializeTabTracking() {
   try {
@@ -90,7 +138,7 @@ async function initializeTabTracking() {
     if (activeTab) {
       // If we have a different active tab than stored, update history
       if (currentTabId && currentTabId !== activeTab.id) {
-        addToHistory(currentTabId);
+        await addToHistory(currentTabId);
       }
       currentTabId = activeTab.id;
       currentWindowId = activeTab.windowId;
@@ -138,7 +186,7 @@ async function cleanupTabHistory() {
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   // Add previous current tab to history
   if (currentTabId && currentTabId !== activeInfo.tabId) {
-    addToHistory(currentTabId);
+    await addToHistory(currentTabId);
   }
   
   // Update current tab and window
@@ -164,7 +212,7 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
     if (activeTab) {
       // Add previous current tab to history if different
       if (currentTabId && currentTabId !== activeTab.id) {
-        addToHistory(currentTabId);
+        await addToHistory(currentTabId);
       }
       
       currentTabId = activeTab.id;
